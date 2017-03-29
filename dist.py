@@ -39,19 +39,27 @@ def dL(z):
 def bin_it(arr, dBin, fun):
 	bins = []
 
-	bMin = np.amin(arr[:,0])
-	bMax = np.amax(arr[:,0])
+	bMin = 0 #np.amin(arr[:,0])
+	bMax = 8 #np.amax(arr[:,0])
 
 	for b in np.arange(bMin, bMax, dBin):
 		bin_arr = np.array(filter(lambda x: x[0] > b and x[0] <= b + dBin, arr))
 
-		if len(bin_arr) > 0:
-			bin_val = fun(bin_arr[:,1])#np.mean(bin_arr[:,1])
+		bin_val = 0
 
-			bins.append([
-				b + dBin / 2,
-				bin_val
-			])
+		if len(bin_arr) > 0:
+			bin_std = np.std(bin_arr[:,1])
+			bin_mean = np.mean(bin_arr[:,1])
+
+			bin_arr = np.array(filter(lambda x: x[1] < bin_std + bin_mean, bin_arr))
+
+			if len(bin_arr) > 0:
+				bin_val = fun(bin_arr[:,1])
+
+		bins.append([
+			b + dBin / 2,
+			bin_val
+		])
 
 	return np.array(bins)
 
@@ -104,6 +112,10 @@ qso_sfr_binned_std = bin_it(qso_sfr_data, dz, bin_std)
 gal_sfr_binned = bin_it(gal_sfr_data, dz, bin_mean)
 gal_sfr_binned_std = bin_it(gal_sfr_data, dz, bin_std)
 
+plt.figure(1)
+
+plt.subplot(211)
+
 plt.plot(qso_sfr_binned[:,0], qso_sfr_binned[:,1], 'r-o', label='QSO')
 plt.plot(qso_sfr_binned_std[:,0], qso_sfr_binned_std[:,1], 'r-.')
 
@@ -114,5 +126,12 @@ plt.title("U Band Derived SFR Histories")
 plt.legend(loc='upper left')
 plt.xlabel("z")
 plt.ylabel("SFR [log(M sun yr^-1)]")
+
+plt.subplot(212)
+plt.plot(qso_sfr_binned[:,0], 100 * (qso_sfr_binned[:,1] - gal_sfr_binned[:,1]) / gal_sfr_binned[:,1], 'g-o')
+
+plt.title("SFR % Diff (QSO / GAL)")
+plt.xlabel("z")
+plt.ylabel("%")
 
 plt.show()
