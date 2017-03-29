@@ -34,58 +34,85 @@ def dL(z):
 #Expects..
 #	arr: 2d array; dependant, independant variable
 #	dBin: bin size
-def bin_it(arr, dBin):
+#	fun: function to reduce to each bin
+
+def bin_it(arr, dBin, fun):
 	bins = []
 
 	bMin = np.amin(arr[:,0])
 	bMax = np.amax(arr[:,0])
 
 	for b in np.arange(bMin, bMax, dBin):
-		bin_arr = np.array(filter(lambda x: x[1] > b and x[1] <= b + dBin, arr))
-		bins.append([
-			b,
-			np.mean(bin_arr[:,0])
-		])
+		bin_arr = np.array(filter(lambda x: x[0] > b and x[0] <= b + dBin, arr))
+
+		if len(bin_arr) > 0:
+			bin_val = fun(bin_arr[:,1])#np.mean(bin_arr[:,1])
+
+			bins.append([
+				b + dBin / 2,
+				bin_val
+			])
 
 	return np.array(bins)
 
-file = sys.argv[1]
-csv_file = open(file, 'r')
-header = csv_file.readline().rstrip()
-#header = header + ",d,L_U,SFR_U"
-#print header
+#Function definition: wrapper to generate data
+def calc_sfr(path):
+	file = path
+	csv_file = open(file, 'r')
+	header = csv_file.readline().rstrip()
 
-sfr_data = []
+	sfr_data = []
 
-for l in csv_file:
-	l = l.rstrip()
-	data = l.split(",")
+	for l in csv_file:
+		l = l.rstrip()
+		data = l.split(",")
 
-	z = float(data[6])
-	f_U = float(data[5])
+		z = float(data[6])
+		f_U = float(data[5])
 
-	if z > 0 and f_U > 0:
-		d = dL(z)
+		if z > 0 and f_U > 0:
+			d = dL(z)
 
-		m_U = 22.5 - 2.5 * math.log(f_U, 10)
-		L_U = (d / ly) ** 2 * 10 ** (-(m_U + 2.72) / 2.5) * L_sun
+			m_U = 22.5 - 2.5 * math.log(f_U, 10)
+			L_U = (d / ly) ** 2 * 10 ** (-(m_U + 2.72) / 2.5) * L_sun
 
-		SFR_U = L_U * 3e-47 * 3.543e-7 #https://ned.ipac.caltech.edu/level5/Sept12/Calzetti/Calzetti1_2.html
+			SFR_U = L_U * 3e-47 * 3.543e-7 #https://ned.ipac.caltech.edu/level5/Sept12/Calzetti/Calzetti1_2.html
+			#SFR_U = L_U * 5.9e-21 #http://www.physics.usyd.edu.au/~ahopkins/thesis/node11.html
 
-		data.append(str(d))
-		data.append(str(L_U))
-		data.append(str(SFR_U))
+			data.append(str(d))
+			data.append(str(L_U))
+			data.append(str(SFR_U))
 
-		sfr_data.append([
-			z,
-			SFR_U
-		])
+			sfr_data.append([
+				z,
+				SFR_U
+			])
 
-		#print ",".join(data)
+	sfr_data = np.array(sfr_data)
+	return sfr_data
 
-sfr_data = np.array(sfr_data)
+qso_sfr_data = calc_sfr('data/qso_data.csv')
+gal_sfr_data = calc_sfr('data/gal_data.csv')
 
-sfr_binned = bin_it(sfr_data, 0.5)
+dz = 0.5
+bin_mean = lambda a: np.mean(a)
+bin_std = lambda a: np.std(a)
 
-plt.plot(sfr_binned[:,0], sfr_binned[:,1], 'ro', label='Z Binned SFR')
+qso_sfr_binned = bin_it(qso_sfr_data, dz, bin_mean)
+qso_sfr_binned_std = bin_it(qso_sfr_data, dz, bin_std)
+
+gal_sfr_binned = bin_it(gal_sfr_data, dz, bin_mean)
+gal_sfr_binned_std = bin_it(gal_sfr_data, dz, bin_std)
+
+plt.plot(qso_sfr_binned[:,0], qso_sfr_binned[:,1], 'r-o', label='QSO')
+plt.plot(qso_sfr_binned_std[:,0], qso_sfr_binned_std[:,1], 'r-.')
+
+plt.plot(gal_sfr_binned[:,0], gal_sfr_binned[:,1], 'b-o', label='GAL')
+plt.plot(gal_sfr_binned_std[:,0], gal_sfr_binned_std[:,1] , 'b-.')
+
+plt.title("U Band Derived SFR Histories")
+plt.legend(loc='upper left')
+plt.xlabel("z")
+plt.ylabel("SFR [log(M sun yr^-1)]")
+
 plt.show()
