@@ -46,20 +46,25 @@ def bin_it(arr, dBin, fun):
 	for b in np.arange(bMin, bMax, dBin):
 		bin_arr = np.array(filter(lambda x: x[0] > b and x[0] <= b + dBin, arr))
 
-		bin_val = 0
+		bin_mean = 0
+		bin_std = 0
+		bin_per = 0
 
 		if len(bin_arr) > 0:
-			bin_std = np.std(bin_arr[:,1])
 			bin_mean = np.mean(bin_arr[:,1])
+			bin_std = np.std(bin_arr[:,1]) / bin_mean
+			bin_per = len(bin_arr) / float(len(arr))
 
 			#bin_arr = np.array(filter(lambda x: x[1] < 3 * bin_std + bin_mean, bin_arr))
 
-			if len(bin_arr) > 0:
-				bin_val = fun(bin_arr[:,1])
+			#if len(bin_arr) > 0:
+			#	bin_val = fun(bin_arr[:,1])
 
 		bins.append([
 			b + dBin / 2,
-			bin_val
+			bin_mean,
+			bin_std,
+			bin_per
 		])
 
 	return np.array(bins)
@@ -111,31 +116,38 @@ bin_mean = lambda a: np.mean(a)
 bin_std = lambda a: np.std(a)
 
 qso_sfr_binned = bin_it(qso_sfr_data, dz, bin_mean)
-qso_sfr_binned_std = bin_it(qso_sfr_data, dz, bin_std)
 
 gal_sfr_binned = bin_it(gal_sfr_data, dz, bin_mean)
-gal_sfr_binned_std = bin_it(gal_sfr_data, dz, bin_std)
 
 plt.figure(1)
 
-plt.subplot(211)
+plt.subplot(311)
 
-plt.plot(qso_sfr_binned[:,0], qso_sfr_binned[:,1], 'r-o', label='QSO')
-plt.plot(qso_sfr_binned_std[:,0], qso_sfr_binned_std[:,1], 'r-.')
+plt.errorbar(qso_sfr_binned[:,0], qso_sfr_binned[:,1], yerr=qso_sfr_binned[:,2], label='QSO', fmt="r-o")
+#plt.plot(qso_sfr_binned[:,0], qso_sfr_binned[:,2], 'r-.')
 
-plt.plot(gal_sfr_binned[:,0], gal_sfr_binned[:,1], 'b-o', label='GAL')
-plt.plot(gal_sfr_binned_std[:,0], gal_sfr_binned_std[:,1] , 'b-.')
+plt.errorbar(gal_sfr_binned[:,0], gal_sfr_binned[:,1], yerr=gal_sfr_binned[:,2], label='GAL', fmt="b-o")
+#plt.plot(gal_sfr_binned[:,0], gal_sfr_binned[:,2] , 'b-.')
 
 plt.title("U Band Derived SFR Histories")
 plt.legend(loc='upper left')
 plt.xlabel("z")
 plt.ylabel("SFR [log(M sun yr^-1)]")
 
-plt.subplot(212)
-plt.plot(qso_sfr_binned[:,0], 100 * (qso_sfr_binned[:,1] - gal_sfr_binned[:,1]) / gal_sfr_binned[:,1], 'g-o')
+plt.subplot(312)
+plt.plot(qso_sfr_binned[:,0], (qso_sfr_binned[:,1] - gal_sfr_binned[:,1]) / gal_sfr_binned[:,1], 'g-o')
 
 plt.title("SFR % Diff (QSO / GAL)")
 plt.xlabel("z")
 plt.ylabel("%")
+
+plt.subplot(313)
+
+plt.plot(qso_sfr_binned[:,0], qso_sfr_binned[:,3], 'r-o', label='QSO')
+plt.plot(gal_sfr_binned[:,0], gal_sfr_binned[:,3], 'b-o', label='GAL')
+
+plt.title("% Pop at Given Z")
+plt.xlabel("z")
+plt.ylabel("% of Pop")
 
 plt.show()
