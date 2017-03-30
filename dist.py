@@ -7,22 +7,23 @@ import matplotlib.pyplot as plt
 
 #Constant Definitions
 #Note: most equations have already been numericalized with Mathematica
-Om = 0.27
-OA = 0.73
+#http://planck.caltech.edu/pub/2015results/Planck_2015_Results_XIII_Cosmological_Parameters.pdf
+Om = 0.308
+OA = 1 - Om #Assume flat
 Ok = 1 - Om - OA
 c = 299792458
-H0 = 69.3
+H0 = 1.62e-18
 pc = 3.086e16
-ly = 1.057e-16
+ly = 9.4607e15
 L_sun = 3.828e26
 M_sun = 4.83
 
 #Equation definitions: distances
 def E(z):
-	return math.sqrt(0.73 + 0.27 * (1 + z)**3)
+	return math.sqrt(OA + Om * (1 + z)**3)
 
 def dH(z):
-	return (c * z) / H0
+	return (c * z) / (H0 * E(z))
 
 def dC(z):
 	return dH(z) * integrate.quad(lambda z: 1 / E(z), 0, z)[0]
@@ -51,7 +52,7 @@ def bin_it(arr, dBin, fun):
 			bin_std = np.std(bin_arr[:,1])
 			bin_mean = np.mean(bin_arr[:,1])
 
-			bin_arr = np.array(filter(lambda x: x[1] < bin_std + bin_mean, bin_arr))
+			#bin_arr = np.array(filter(lambda x: x[1] < 3 * bin_std + bin_mean, bin_arr))
 
 			if len(bin_arr) > 0:
 				bin_val = fun(bin_arr[:,1])
@@ -81,11 +82,14 @@ def calc_sfr(path):
 		if z > 0 and f_U > 0:
 			d = dL(z)
 
+			#From SDSS
 			m_U = 22.5 - 2.5 * math.log(f_U, 10)
+
+			#Derived from https://en.wikipedia.org/wiki/Luminosity
 			L_U = (d / ly) ** 2 * 10 ** (-(m_U + 2.72) / 2.5) * L_sun
 
-			SFR_U = L_U * 3e-47 * 3.543e-7 #https://ned.ipac.caltech.edu/level5/Sept12/Calzetti/Calzetti1_2.html
-			#SFR_U = L_U * 5.9e-21 #http://www.physics.usyd.edu.au/~ahopkins/thesis/node11.html
+			#SFR_U = L_U * 10000000. * 3e-47 * 33545 #https://ned.ipac.caltech.edu/level5/Sept12/Calzetti/Calzetti1_2.html
+			SFR_U = L_U * 5.9e-21 #http://www.physics.usyd.edu.au/~ahopkins/thesis/node11.html
 
 			data.append(str(d))
 			data.append(str(L_U))
